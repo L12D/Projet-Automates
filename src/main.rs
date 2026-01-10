@@ -366,7 +366,7 @@ fn draw_menu(
     // Instructions en bas (en dessous de la boîte)
     let instructions_y = box_y + box_h + 25.0;
     draw_text(
-        "[↑↓] ou [1-6] Sélectionner salle | Taper le nombre d'agents | [ENTER] Démarrer",
+        "[up or down] pour Sélectionner salle | Taper le nombre d'agents | [ENTER] Démarrer",
         box_x + 60.0, instructions_y, 18.0, WHITE
     );
 }
