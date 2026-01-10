@@ -1,6 +1,6 @@
 use crate::agent::Agent;
 use crate::floor_field::FloorField;
-use crate::grid::{CellType, Grid};
+use crate::grid::{CellType, Grid, ObstaclePattern};
 use rand::seq::SliceRandom;
 use rand::Rng;
 use std::collections::HashMap;
@@ -16,7 +16,17 @@ pub struct Simulation {
 
 impl Simulation {
     pub fn new(width: usize, height: usize, num_agents: usize, k_s: f32) -> Self {
-        let mut grid = Grid::new(width, height);
+        Self::new_with_pattern(width, height, num_agents, k_s, ObstaclePattern::Single)
+    }
+    
+    pub fn new_with_pattern(
+        width: usize, 
+        height: usize, 
+        num_agents: usize, 
+        k_s: f32,
+        pattern: ObstaclePattern
+    ) -> Self {
+        let mut grid = Grid::new_with_pattern(width, height, pattern);
         let floor_field = FloorField::new(&grid);
         
         // Place agents randomly in empty cells
