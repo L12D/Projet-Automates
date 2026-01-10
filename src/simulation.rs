@@ -1,8 +1,9 @@
 use crate::agent::Agent;
 use crate::floor_field::FloorField;
 use crate::grid::{CellType, Grid};
+use rand::seq::SliceRandom;
 use rand::Rng;
-use std::collections::HashSet;
+use std::collections::HashMap;
 
 pub struct Simulation {
     grid: Grid,
@@ -10,6 +11,7 @@ pub struct Simulation {
     agents: Vec<Agent>,
     k_s: f32,
     step_count: usize,
+    use_probabilistic: bool,
 }
 
 impl Simulation {
@@ -40,6 +42,7 @@ impl Simulation {
             agents,
             k_s,
             step_count: 0,
+            use_probabilistic: false, // Mode déterministe par défaut (plus stable)
         }
     }
     
@@ -50,94 +53,109 @@ impl Simulation {
         
         self.step_count += 1;
         
-        // Phase 1: Each agent chooses next position
-        let mut desired_positions = Vec::new();
-        for agent in &self.agents {
-            let next_pos = agent.choose_next_position(
-                self.floor_field.distances(),
-                self.grid.width(),
-                self.grid.height(),
-                |x, y| {
-                    self.grid.is_walkable(x, y) || (x == agent.x && y == agent.y)
-                },
-                self.k_s,
-            );
-            desired_positions.push(next_pos);
-        }
-        
-        // Phase 2: Resolve conflicts
-        let mut occupied = HashSet::new();
-        let mut new_agents = Vec::new();
-        
-        // First pass: check for conflicts
-        let mut conflicts: Vec<Vec<usize>> = vec![Vec::new(); self.agents.len()];
-        for (i, &next_pos) in desired_positions.iter().enumerate() {
-            if let Some(pos) = next_pos {
-                for (j, &other_pos) in desired_positions.iter().enumerate() {
-                    if i != j && other_pos == Some(pos) {
-                        conflicts[i].push(j);
-                    }
-                }
-            }
-        }
-        
-        // Second pass: move agents
+        // Ordre aléatoire pour éviter les biais
         let mut rng = rand::thread_rng();
-        for (i, agent) in self.agents.iter().enumerate() {
-            // Clear current position
-            self.grid.set(agent.x, agent.y, CellType::Empty);
+        let mut indices: Vec<usize> = (0..self.agents.len()).collect();
+        indices.shuffle(&mut rng);
+        
+        // Phase 1: Déterminer les mouvements désirés
+        let mut desired_moves: HashMap<usize, Option<(usize, usize)>> = HashMap::new();
+        
+        for &i in &indices {
+            let agent = &self.agents[i];
             
-            if let Some((nx, ny)) = desired_positions[i] {
-                // Check if there's a conflict
-                if !conflicts[i].is_empty() {
-                    // Randomly decide if this agent wins the conflict
-                    if rng.gen_bool(1.0 / (conflicts[i].len() + 1) as f64) && !occupied.contains(&(nx, ny)) {
-                        occupied.insert((nx, ny));
-                        
-                        // Check if agent reached exit
-                        if self.grid.is_exit(nx, ny) {
-                            // Agent evacuated, don't add to new_agents
-                            continue;
-                        }
-                        
-                        let mut new_agent = *agent;
-                        new_agent.x = nx;
-                        new_agent.y = ny;
-                        new_agents.push(new_agent);
-                    } else {
-                        // Lost conflict, stay in place
-                        new_agents.push(*agent);
-                    }
-                } else {
-                    // No conflict
-                    if !occupied.contains(&(nx, ny)) {
-                        occupied.insert((nx, ny));
-                        
-                        // Check if agent reached exit
-                        if self.grid.is_exit(nx, ny) {
-                            // Agent evacuated, don't add to new_agents
-                            continue;
-                        }
-                        
-                        let mut new_agent = *agent;
-                        new_agent.x = nx;
-                        new_agent.y = ny;
-                        new_agents.push(new_agent);
-                    } else {
-                        // Position already taken, stay in place
-                        new_agents.push(*agent);
-                    }
-                }
+            let next_pos = if self.use_probabilistic {
+                agent.choose_next_position_probabilistic(
+                    self.floor_field.distances(),
+                    self.grid.width(),
+                    self.grid.height(),
+                    |x, y| self.grid.is_walkable(x, y) || (x == agent.x && y == agent.y),
+                    self.k_s,
+                )
             } else {
-                // No valid move, stay in place
-                new_agents.push(*agent);
+                // Mode déterministe : suit directement le gradient
+                agent.choose_next_position(
+                    self.floor_field.distances(),
+                    self.grid.width(),
+                    self.grid.height(),
+                    |x, y| self.grid.is_walkable(x, y) || (x == agent.x && y == agent.y),
+                )
+            };
+            
+            desired_moves.insert(i, next_pos);
+        }
+        
+        // Phase 2: Résolution des conflits avec priorité
+        let mut target_counts: HashMap<(usize, usize), Vec<usize>> = HashMap::new();
+        
+        for (&i, &next_pos) in &desired_moves {
+            if let Some(pos) = next_pos {
+                target_counts.entry(pos).or_insert_with(Vec::new).push(i);
             }
         }
         
-        // Update agents list
-        self.agents = new_agents;
+        // Phase 3: Effectuer les mouvements
+        let mut evacuated_indices = Vec::new();
+        let mut moved = vec![false; self.agents.len()];
         
-        // Update grid with new agent positions
+        // D'abord, effacer toutes les positions actuelles
+        for agent in &self.agents {
+            self.grid.set(agent.x, agent.y, CellType::Empty);
+        }
+        
+        // Traiter les mouvements par ordre de priorité
+        for &i in &indices {
+            if let Some(next_pos) = desired_moves[&i] {
+                let (nx, ny) = next_pos;
+                
+                // Vérifier les conflits
+                let conflicts = target_counts.get(&(nx, ny)).map(|v| v.len()).unwrap_or(0);
+                
+                if conflicts == 1 {
+                    // Pas de conflit, mouvement garanti
+                    self.agents[i].x = nx;
+                    self.agents[i].y = ny;
+                    moved[i] = true;
+                    
+                    // Vérifier si l'agent atteint la sortie
+                    if self.grid.is_exit(nx, ny) {
+                        evacuated_indices.push(i);
+                    }
+                } else if conflicts > 1 {
+                    // Conflit : priorité au plus proche de la sortie
+                    let contestants = target_counts.get(&(nx, ny)).unwrap();
+                    let mut best_agent = i;
+                    let mut best_dist = self.floor_field.distances()[self.agents[i].y][self.agents[i].x];
+                    
+                    for &contestant in contestants {
+                        let dist = self.floor_field.distances()[self.agents[contestant].y][self.agents[contestant].x];
+                        if dist < best_dist {
+                            best_dist = dist;
+                            best_agent = contestant;
+                        }
+                    }
+                    
+                    // Seul le meilleur bouge
+                    if best_agent == i {
+                        self.agents[i].x = nx;
+                        self.agents[i].y = ny;
+                        moved[i] = true;
+                        
+                        if self.grid.is_exit(nx, ny) {
+                            evacuated_indices.push(i);
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Retirer les agents évacués (en ordre décroissant pour éviter les décalages d'index)
+        evacuated_indices.sort_by(|a, b| b.cmp(a));
+        for i in evacuated_indices {
+            self.agents.remove(i);
+        }
+        
+        // Remettre les agents sur la grille
         for agent in &self.agents {
             self.grid.set(agent.x, agent.y, CellType::Agent);
         }
@@ -153,5 +171,9 @@ impl Simulation {
     
     pub fn step_count(&self) -> usize {
         self.step_count
+    }
+    
+    pub fn is_finished(&self) -> bool {
+        self.agents.is_empty()
     }
 }
