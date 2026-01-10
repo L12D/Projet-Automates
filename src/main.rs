@@ -27,8 +27,8 @@ const ROOM_CONFIGS: [RoomConfig; 6] = [
         pattern: ObstaclePattern::Empty 
     },
     RoomConfig { 
-        name: "Pilier central", 
-        description: "Un seul obstacle au centre",
+        name: "Pilier", 
+        description: "Un seul obstacle proche de la sortie",
         pattern: ObstaclePattern::Single 
     },
     RoomConfig { 

@@ -68,7 +68,7 @@ impl Grid {
             ObstaclePattern::Single => {
                 // Un seul pilier au centre-gauche
                 let mid_height = self.height / 2;
-                let quarter_width = self.width / 4;
+                let quarter_width = self.width *5 / 6;
                 
                 for dy in -1..=1 {
                     for dx in -1..=1 {
