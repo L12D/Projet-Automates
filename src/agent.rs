@@ -4,11 +4,17 @@ use rand::Rng;
 pub struct Agent {
     pub x: usize,
     pub y: usize,
+    pub phase_offset: f32, // Pour désynchroniser les mouvements
 }
 
 impl Agent {
     pub fn new(x: usize, y: usize, _id: usize) -> Self {
-        Agent { x, y }
+        let mut rng = rand::thread_rng();
+        Agent { 
+            x, 
+            y,
+            phase_offset: rng.gen::<f32>(), // Offset aléatoire entre 0 et 1
+        }
     }
     
     /// Get Moore neighborhood (8 directions) - Priorité aux directions cardinales
@@ -40,6 +46,7 @@ impl Agent {
     }
     
     /// Choisit la meilleure position basée sur le gradient du champ de potentiel
+    /// Avec un petit bruit pour éviter les mouvements trop synchronisés
     pub fn choose_next_position(
         &self,
         floor_field: &[Vec<f32>],
@@ -55,23 +62,39 @@ impl Agent {
         }
         
         let neighbors = self.get_neighbors();
-        let mut best_move = None;
+        let mut candidates = Vec::new();
         let mut best_dist = current_dist;
         
-        // Chercher le voisin avec la distance minimale (gradient descent)
+        // Chercher les voisins avec une distance proche du minimum
         for (nx, ny) in neighbors {
             if nx < grid_width && ny < grid_height && is_walkable(nx, ny) {
                 let distance = floor_field[ny][nx];
                 
-                // Suivre le gradient (aller vers la distance plus petite)
                 if distance < best_dist {
                     best_dist = distance;
-                    best_move = Some((nx, ny));
+                    candidates.clear();
+                    candidates.push((nx, ny, distance));
+                } else if distance < best_dist + 0.5 { // Tolérance pour variété
+                    candidates.push((nx, ny, distance));
                 }
             }
         }
         
-        best_move
+        if candidates.is_empty() {
+            return None;
+        }
+        
+        // Choisir parmi les candidats avec un petit biais aléatoire
+        let mut rng = rand::thread_rng();
+        let noise: f32 = rng.gen::<f32>() * 0.3; // Petit bruit
+        
+        candidates.sort_by(|a, b| {
+            let score_a = a.2 + noise * (rng.gen::<f32>() - 0.5);
+            let score_b = b.2 + noise * (rng.gen::<f32>() - 0.5);
+            score_a.partial_cmp(&score_b).unwrap()
+        });
+        
+        Some((candidates[0].0, candidates[0].1))
     }
     
     /// Version avec probabilités pour un comportement plus naturel (optionnel)

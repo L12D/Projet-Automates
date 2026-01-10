@@ -61,8 +61,19 @@ impl Simulation {
         // Phase 1: Déterminer les mouvements désirés
         let mut desired_moves: HashMap<usize, Option<(usize, usize)>> = HashMap::new();
         
+        // Variation temporelle : pas tous les agents ne bougent à chaque pas
+        let time_factor = (self.step_count as f32 * 0.1).sin();
+        
         for &i in &indices {
             let agent = &self.agents[i];
+            
+            // Chaque agent a une "phase" légèrement différente
+            let should_move = (time_factor + agent.phase_offset * 6.28).sin() > -0.3;
+            
+            if !should_move && rng.gen::<f32>() < 0.3 { // 30% de chance de ne pas bouger
+                desired_moves.insert(i, None);
+                continue;
+            }
             
             let next_pos = if self.use_probabilistic {
                 agent.choose_next_position_probabilistic(
@@ -171,9 +182,5 @@ impl Simulation {
     
     pub fn step_count(&self) -> usize {
         self.step_count
-    }
-    
-    pub fn is_finished(&self) -> bool {
-        self.agents.is_empty()
     }
 }

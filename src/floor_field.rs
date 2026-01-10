@@ -71,16 +71,23 @@ impl FloorField {
             queue.push_back((x, y, 0.0));
         }
         
-        // Von Neumann (4 directions) pour plus de stabilité
+        // Moore neighborhood (8 directions) avec coûts euclidiens
+        // Coût 1.0 pour les directions cardinales, sqrt(2) ≈ 1.414 pour les diagonales
         let directions = [
-            (0, -1),  // Nord
-            (1,  0),  // Est
-            (0,  1),  // Sud
-            (-1, 0),  // Ouest
+            // Directions cardinales - coût 1.0
+            (0, -1, 1.0),    // Nord
+            (1,  0, 1.0),    // Est
+            (0,  1, 1.0),    // Sud
+            (-1, 0, 1.0),    // Ouest
+            // Directions diagonales - coût sqrt(2)
+            (1, -1, 1.414),  // Nord-Est
+            (1,  1, 1.414),  // Sud-Est
+            (-1, 1, 1.414),  // Sud-Ouest
+            (-1,-1, 1.414),  // Nord-Ouest
         ];
         
         while let Some((x, y, dist)) = queue.pop_front() {
-            for (dx, dy) in directions.iter() {
+            for &(dx, dy, cost) in directions.iter() {
                 let nx = x as i32 + dx;
                 let ny = y as i32 + dy;
                 
@@ -89,22 +96,56 @@ impl FloorField {
                     let ny = ny as usize;
                     
                     if nx < grid.width() && ny < grid.height() {
-                        let new_dist = dist + 1.0;
+                        let mut new_dist = dist + cost;
                         
                         // Vérifier si la cellule est marchable
                         if let Some(cell_type) = grid.get(nx, ny) {
                             // Pas un mur et pas occupée par un autre agent
                             let is_occupied = occupied.iter().any(|&(ox, oy)| ox == nx && oy == ny);
                             
-                            if cell_type != CellType::Wall && !is_occupied && distances[ny][nx] > new_dist {
-                                distances[ny][nx] = new_dist;
-                                queue.push_back((nx, ny, new_dist));
+                            if cell_type != CellType::Wall && !is_occupied {
+                                // Bonus si la cellule est adjacente à un mur (effet bordure)
+                                // Simule le comportement de longer les murs près de la sortie
+                                let near_wall = Self::is_near_wall(nx, ny, grid);
+                                if near_wall && new_dist < 10.0 { // Seulement près de la sortie
+                                    new_dist -= 0.3; // Petit bonus d'attraction
+                                }
+                                
+                                if distances[ny][nx] > new_dist {
+                                    distances[ny][nx] = new_dist;
+                                    queue.push_back((nx, ny, new_dist));
+                                }
                             }
                         }
                     }
                 }
             }
         }
+    }
+    
+    fn is_near_wall(x: usize, y: usize, grid: &Grid) -> bool {
+        let neighbors = [
+            (0, -1), (1, 0), (0, 1), (-1, 0),
+            (1, -1), (1, 1), (-1, 1), (-1, -1),
+        ];
+        
+        for (dx, dy) in neighbors.iter() {
+            let nx = x as i32 + dx;
+            let ny = y as i32 + dy;
+            
+            if nx >= 0 && ny >= 0 {
+                let nx = nx as usize;
+                let ny = ny as usize;
+                
+                if let Some(cell_type) = grid.get(nx, ny) {
+                    if cell_type == CellType::Wall {
+                        return true;
+                    }
+                }
+            }
+        }
+        
+        false
     }
     
     pub fn distances(&self) -> &[Vec<f32>] {
