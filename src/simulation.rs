@@ -15,9 +15,6 @@ pub struct Simulation {
 }
 
 impl Simulation {
-    pub fn new(width: usize, height: usize, num_agents: usize, k_s: f32) -> Self {
-        Self::new_with_pattern(width, height, num_agents, k_s, ObstaclePattern::Single)
-    }
     
     pub fn new_with_pattern(
         width: usize, 

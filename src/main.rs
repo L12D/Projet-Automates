@@ -67,7 +67,7 @@ fn window_conf() -> Conf {
     Conf {
         window_title: "Projet Automate : Évacuation".to_owned(),
         window_width: 920, 
-        window_height: 650, 
+        window_height: 750, 
 
         ..Default::default()
     }

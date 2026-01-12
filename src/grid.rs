@@ -26,11 +26,7 @@ pub struct Grid {
     cells: Vec<Vec<CellType>>,
 }
 
-impl Grid {
-    pub fn new(width: usize, height: usize) -> Self {
-        Self::new_with_pattern(width, height, ObstaclePattern::Single)
-    }
-    
+impl Grid {    
     pub fn new_with_pattern(width: usize, height: usize, pattern: ObstaclePattern) -> Self {
         let cells = vec![vec![CellType::Empty; width]; height];
         let mut grid = Grid {
@@ -179,8 +175,8 @@ impl Grid {
                 for (ox, oy) in obstacles.iter() {
                     for dy in -1i32..=1 {
                         for dx in -1i32..=1 {
-                            let y = (*oy as i32 + dy);
-                            let x = (*ox as i32 + dx);
+                            let y = *oy as i32 + dy;
+                            let x = *ox as i32 + dx;
                             if y >= 0 && x >= 0 && (y as usize) < self.height && (x as usize) < self.width {
                                 self.cells[y as usize][x as usize] = CellType::Wall;
                             }
@@ -231,7 +227,7 @@ impl Grid {
         // Exit on the right wall, in the middle
         let exit_y = self.height / 2;
         for dy in -1i32..=1 {
-            let y = (exit_y as i32 + dy);
+            let y = exit_y as i32 + dy;
             if y >= 0 && (y as usize) < self.height {
                 self.cells[y as usize][self.width - 1] = CellType::Exit;
             }

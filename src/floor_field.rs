@@ -25,29 +25,6 @@ impl FloorField {
         
         FloorField { distances }
     }
-
-    pub fn update(&mut self, grid: &Grid, occupied_cells: &[(usize, usize)]) {
-        let width = grid.width();
-        let height = grid.height();
-        
-        for row in &mut self.distances {
-            for cell in row.iter_mut() {
-                *cell = f32::INFINITY;
-            }
-        }
-        
-        let mut exits = Vec::new();
-        for y in 0..height {
-            for x in 0..width {
-                if grid.is_exit(x, y) {
-                    exits.push((x, y));
-                }
-            }
-        }
-        
-
-        Self::compute_distances_with_agents(&mut self.distances, &exits, grid, occupied_cells);
-    }
     
     fn compute_distances(distances: &mut [Vec<f32>], exits: &[(usize, usize)], grid: &Grid) {
         Self::compute_distances_with_agents(distances, exits, grid, &[]);
@@ -141,45 +118,5 @@ impl FloorField {
     
     pub fn distances(&self) -> &[Vec<f32>] {
         &self.distances
-    }
-    
-    /// Trouve la meilleure direction basée sur le gradient
-    pub fn get_best_direction(&self, x: usize, y: usize) -> Option<(i32, i32)> {
-        let current_dist = self.distances[y][x];
-        
-        if current_dist.is_infinite() {
-            return None;
-        }
-        
-        let mut best_dir = None;
-        let mut best_dist = current_dist;
-        
-
-        let directions = [
-            (0, -1),   // Haut
-            (1, 0),    // Gauche
-            (0, 1),    // Bas
-            (-1, 0),   // Droite
-            (1, -1),   // Haut-Gauche
-            (1, 1),    // Bas-Gauche
-            (-1, 1),   // Bas-Droite
-            (-1, -1),  // Haut-Droite
-        ];
-        
-        for &(dx, dy) in &directions {
-            let nx = (x as i32 + dx) as usize;
-            let ny = (y as i32 + dy) as usize;
-            
-            if ny < self.distances.len() && nx < self.distances[0].len() {
-                let neighbor_dist = self.distances[ny][nx];
-                
-                if neighbor_dist < best_dist {
-                    best_dist = neighbor_dist;
-                    best_dir = Some((dx, dy));
-                }
-            }
-        }
-        
-        best_dir
     }
 }
