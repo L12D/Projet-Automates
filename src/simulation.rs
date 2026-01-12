@@ -29,7 +29,6 @@ impl Simulation {
         let mut grid = Grid::new_with_pattern(width, height, pattern);
         let floor_field = FloorField::new(&grid);
         
-        // Place agents randomly in empty cells
         let mut agents = Vec::new();
         let mut rng = rand::thread_rng();
         let mut placed = 0;
@@ -52,7 +51,7 @@ impl Simulation {
             agents,
             k_s,
             step_count: 0,
-            use_probabilistic: false, // Mode déterministe par défaut (plus stable)
+            use_probabilistic: false, 
         }
     }
     
@@ -68,19 +67,16 @@ impl Simulation {
         let mut indices: Vec<usize> = (0..self.agents.len()).collect();
         indices.shuffle(&mut rng);
         
-        // Phase 1: Déterminer les mouvements désirés
         let mut desired_moves: HashMap<usize, Option<(usize, usize)>> = HashMap::new();
         
-        // Variation temporelle : pas tous les agents ne bougent à chaque pas
         let time_factor = (self.step_count as f32 * 0.1).sin();
         
         for &i in &indices {
             let agent = &self.agents[i];
             
-            // Chaque agent a une "phase" légèrement différente
             let should_move = (time_factor + agent.phase_offset * 6.28).sin() > -0.3;
             
-            if !should_move && rng.gen::<f32>() < 0.3 { // 30% de chance de ne pas bouger
+            if !should_move && rng.gen::<f32>() < 0.3 { 
                 desired_moves.insert(i, None);
                 continue;
             }
@@ -94,7 +90,6 @@ impl Simulation {
                     self.k_s,
                 )
             } else {
-                // Mode déterministe : suit directement le gradient
                 agent.choose_next_position(
                     self.floor_field.distances(),
                     self.grid.width(),
@@ -106,7 +101,6 @@ impl Simulation {
             desired_moves.insert(i, next_pos);
         }
         
-        // Phase 2: Résolution des conflits avec priorité
         let mut target_counts: HashMap<(usize, usize), Vec<usize>> = HashMap::new();
         
         for (&i, &next_pos) in &desired_moves {
@@ -115,11 +109,10 @@ impl Simulation {
             }
         }
         
-        // Phase 3: Effectuer les mouvements
         let mut evacuated_indices = Vec::new();
         let mut moved = vec![false; self.agents.len()];
         
-        // D'abord, effacer toutes les positions actuelles
+
         for agent in &self.agents {
             self.grid.set(agent.x, agent.y, CellType::Empty);
         }

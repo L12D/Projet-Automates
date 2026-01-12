@@ -21,25 +21,21 @@ impl FloorField {
             }
         }
         
-        // BFS from all exit cells simultaneously
         Self::compute_distances(&mut distances, &exits, grid);
         
         FloorField { distances }
     }
-    
-    /// Recalcule le champ en tenant compte des agents comme obstacles temporaires
+
     pub fn update(&mut self, grid: &Grid, occupied_cells: &[(usize, usize)]) {
         let width = grid.width();
         let height = grid.height();
         
-        // Réinitialiser
         for row in &mut self.distances {
             for cell in row.iter_mut() {
                 *cell = f32::INFINITY;
             }
         }
         
-        // Find exits
         let mut exits = Vec::new();
         for y in 0..height {
             for x in 0..width {
@@ -49,7 +45,7 @@ impl FloorField {
             }
         }
         
-        // BFS avec agents comme obstacles temporaires
+
         Self::compute_distances_with_agents(&mut self.distances, &exits, grid, occupied_cells);
     }
     
@@ -65,25 +61,23 @@ impl FloorField {
     ) {
         let mut queue = VecDeque::new();
         
-        // Initialize with exits at distance 0
         for &(x, y) in exits {
             distances[y][x] = 0.0;
             queue.push_back((x, y, 0.0));
         }
         
-        // Moore neighborhood (8 directions) avec coûts euclidiens
-        // Coût 1.0 pour les directions cardinales, sqrt(2) ≈ 1.414 pour les diagonales
+
         let directions = [
             // Directions cardinales - coût 1.0
-            (0, -1, 1.0),    // Nord
-            (1,  0, 1.0),    // Est
-            (0,  1, 1.0),    // Sud
-            (-1, 0, 1.0),    // Ouest
+            (0, -1, 1.0),    // Haut
+            (1,  0, 1.0),    // Gauche
+            (0,  1, 1.0),    // Bas
+            (-1, 0, 1.0),    // Droite
             // Directions diagonales - coût sqrt(2)
-            (1, -1, 1.414),  // Nord-Est
-            (1,  1, 1.414),  // Sud-Est
-            (-1, 1, 1.414),  // Sud-Ouest
-            (-1,-1, 1.414),  // Nord-Ouest
+            (1, -1, 1.414),  // Haut-Droite
+            (1,  1, 1.414),  // Bas-Gauche
+            (-1, 1, 1.414),  // Bas-Droite
+            (-1,-1, 1.414),  // Haut-Droite
         ];
         
         while let Some((x, y, dist)) = queue.pop_front() {
@@ -100,15 +94,12 @@ impl FloorField {
                         
                         // Vérifier si la cellule est marchable
                         if let Some(cell_type) = grid.get(nx, ny) {
-                            // Pas un mur et pas occupée par un autre agent
                             let is_occupied = occupied.iter().any(|&(ox, oy)| ox == nx && oy == ny);
                             
                             if cell_type != CellType::Wall && !is_occupied {
-                                // Bonus si la cellule est adjacente à un mur (effet bordure)
-                                // Simule le comportement de longer les murs près de la sortie
                                 let near_wall = Self::is_near_wall(nx, ny, grid);
-                                if near_wall && new_dist < 10.0 { // Seulement près de la sortie
-                                    new_dist -= 0.3; // Petit bonus d'attraction
+                                if near_wall && new_dist < 10.0 {
+                                    new_dist -= 0.3; 
                                 }
                                 
                                 if distances[ny][nx] > new_dist {
@@ -163,16 +154,16 @@ impl FloorField {
         let mut best_dir = None;
         let mut best_dist = current_dist;
         
-        // Priorité aux directions cardinales (évite les diagonales qui peuvent bloquer)
+
         let directions = [
-            (0, -1),   // Nord
-            (1, 0),    // Est
-            (0, 1),    // Sud
-            (-1, 0),   // Ouest
-            (1, -1),   // Nord-Est
-            (1, 1),    // Sud-Est
-            (-1, 1),   // Sud-Ouest
-            (-1, -1),  // Nord-Ouest
+            (0, -1),   // Haut
+            (1, 0),    // Gauche
+            (0, 1),    // Bas
+            (-1, 0),   // Droite
+            (1, -1),   // Haut-Gauche
+            (1, 1),    // Bas-Gauche
+            (-1, 1),   // Bas-Droite
+            (-1, -1),  // Haut-Droite
         ];
         
         for &(dx, dy) in &directions {
@@ -182,7 +173,6 @@ impl FloorField {
             if ny < self.distances.len() && nx < self.distances[0].len() {
                 let neighbor_dist = self.distances[ny][nx];
                 
-                // Suit le gradient (descente vers distance minimale)
                 if neighbor_dist < best_dist {
                     best_dist = neighbor_dist;
                     best_dir = Some((dx, dy));
