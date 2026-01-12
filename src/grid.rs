@@ -16,8 +16,8 @@ pub enum ObstaclePattern {
     ExitObstacle,    // Obstacle très proche de la sortie
     MultiObstacles,  // Plusieurs obstacles dispersés
     Labyrinth,       // Labyrinthe simple
-    TwoExitsAdjacent, // Deux sorties adjacentes sur le mur droit
-    TwoExitsFar,     // Deux sorties éloignées sur le mur droit
+    TwoExitsAdjacent, // Deux sorties adjacentes sur le mur droit // Non utilisé
+    TwoExitsFar,     // Deux sorties éloignées sur le mur droit // Non utilisé
 }
 
 pub struct Grid {
@@ -75,7 +75,7 @@ impl Grid {
     fn add_obstacles_pattern(&mut self, pattern: ObstaclePattern) {
         match pattern {
             ObstaclePattern::Single => {
-                // Un seul pilier au centre-gauche
+                // Un seul pilier
                 let mid_height = self.height / 2;
                 let quarter_width = self.width *5 / 6;
                 
@@ -91,9 +91,8 @@ impl Grid {
             },
             
             ObstaclePattern::ExitObstacle => {
-                // Obstacle très proche de la sortie pour créer un goulot
                 let exit_y = self.height / 2;
-                let obstacle_x = self.width - 8; // Très proche du bord droit
+                let obstacle_x = self.width - 8; 
                 
                 // Grand obstacle bloquant
                 for dy in -5i32..=5 {
@@ -106,7 +105,6 @@ impl Grid {
                     }
                 }
                 
-                // Laisser un petit passage au-dessus et en-dessous
                 for offset in 6..9 {
                     if exit_y >= offset {
                         for dx in 0..4 {
@@ -155,8 +153,8 @@ impl Grid {
                 let mid_x = self.width / 2;
                 let mid_y = self.height / 2;
                 
-                // Mur vertical au milieu
-                for y in 5..self.height-5 {
+                // Mur au milieu
+                for y in 0..self.height-1 {
                     self.cells[y][mid_x] = CellType::Wall;
                 }
                 
@@ -220,13 +218,11 @@ impl Grid {
             },
             
             ObstaclePattern::TwoExitsAdjacent => {
-                // Pas d'obstacles internes pour ce pattern
-                // Les deux sorties seront créées par add_two_exits()
+                // Voir add_two_exits()
             },
             
             ObstaclePattern::TwoExitsFar => {
-                // Pas d'obstacles internes pour ce pattern
-                // Les deux sorties seront créées par add_two_exits()
+                // Voir add_two_exits()
             },
         }
     }
@@ -245,10 +241,8 @@ impl Grid {
     fn add_two_exits(&mut self, pattern: ObstaclePattern) {
         match pattern {
             ObstaclePattern::TwoExitsAdjacent => {
-                // Two exits (2 blocks wide each) next to each other on the right side
                 let center_y = self.height / 2;
                 
-                // First exit (upper one) - 2 blocks wide
                 for dy in 0..2 {
                     let y = center_y - 3 + dy;
                     if y < self.height {
@@ -256,7 +250,6 @@ impl Grid {
                     }
                 }
                 
-                // Second exit (lower one) - 2 blocks wide
                 for dy in 0..2 {
                     let y = center_y + 1 + dy;
                     if y < self.height {
@@ -266,18 +259,15 @@ impl Grid {
             },
             
             ObstaclePattern::TwoExitsFar => {
-                // Two exits (2 blocks wide each) far from each other on the right side
                 let quarter_height = self.height / 4;
-                
-                // First exit (upper) - 2 blocks wide
+
                 for dy in 0..2 {
                     let y = quarter_height - 1 + dy;
                     if y < self.height {
                         self.cells[y][self.width - 1] = CellType::Exit;
                     }
                 }
-                
-                // Second exit (lower) - 2 blocks wide
+
                 for dy in 0..2 {
                     let y = 3 * quarter_height - 1 + dy;
                     if y < self.height {

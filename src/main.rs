@@ -29,7 +29,7 @@ const ROOM_CONFIGS: [RoomConfig; 8] = [
     RoomConfig { 
         name: "Pilier", 
         description: "Un seul obstacle proche de la sortie",
-        pattern: ObstaclePattern::Single 
+        pattern: ObstaclePattern::Single
     },
     RoomConfig { 
         name: "Pièces multiples", 

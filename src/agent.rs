@@ -4,7 +4,7 @@ use rand::Rng;
 pub struct Agent {
     pub x: usize,
     pub y: usize,
-    pub phase_offset: f32, // Pour désynchroniser les mouvements
+    pub phase_offset: f32,
 }
 
 impl Agent {
@@ -13,24 +13,23 @@ impl Agent {
         Agent { 
             x, 
             y,
-            phase_offset: rng.gen::<f32>(), // Offset aléatoire entre 0 et 1
+            phase_offset: rng.gen::<f32>(),
         }
     }
     
-    /// Get Moore neighborhood (8 directions) - Priorité aux directions cardinales
+    /// Voisinage de Moore - Priorité aux directions cardinales
     pub fn get_neighbors(&self) -> Vec<(usize, usize)> {
         let mut neighbors = Vec::new();
         
-        // D'abord les directions cardinales (plus stables)
         let directions = [
-            (0, -1),   // Nord
-            (1,  0),   // Est
-            (0,  1),   // Sud
-            (-1, 0),   // Ouest
-            (1, -1),   // Nord-Est
-            (1,  1),   // Sud-Est
-            (-1, 1),   // Sud-Ouest
-            (-1,-1),   // Nord-Ouest
+            (0, -1),   // Haut
+            (1,  0),   // Droite
+            (0,  1),   // Bas
+            (-1, 0),   // Gauche
+            (1, -1),   // Haut-Droite
+            (1,  1),   // Bas-Droite
+            (-1, 1),   // Bas-Gauche
+            (-1,-1),   // Haut-Gauche
         ];
         
         for (dx, dy) in directions.iter() {
@@ -56,7 +55,6 @@ impl Agent {
     ) -> Option<(usize, usize)> {
         let current_dist = floor_field[self.y][self.x];
         
-        // Si on est déjà à l'infini, aucun chemin possible
         if current_dist.is_infinite() {
             return None;
         }
@@ -65,7 +63,7 @@ impl Agent {
         let mut candidates = Vec::new();
         let mut best_dist = current_dist;
         
-        // Chercher les voisins avec une distance proche du minimum
+        // Chercher les voisins avec plus faible pottentiel
         for (nx, ny) in neighbors {
             if nx < grid_width && ny < grid_height && is_walkable(nx, ny) {
                 let distance = floor_field[ny][nx];
@@ -86,7 +84,7 @@ impl Agent {
         
         // Choisir parmi les candidats avec un petit biais aléatoire
         let mut rng = rand::thread_rng();
-        let noise: f32 = rng.gen::<f32>() * 0.3; // Petit bruit
+        let noise: f32 = rng.gen::<f32>() * 0.3; // Bruit ajouté
         
         candidates.sort_by(|a, b| {
             let score_a = a.2 + noise * (rng.gen::<f32>() - 0.5);
@@ -127,12 +125,12 @@ impl Agent {
             }
         }
         
-        // If no valid moves, stay in place
+        // Si pas de mouvements valide on reste sur la case (i.e : cas ou la cellule est coincée)
         if valid_moves.is_empty() {
             return None;
         }
         
-        // Normalize probabilities and choose randomly
+        // Gestion des probabilités et du choix aléatoires
         let mut rng = rand::thread_rng();
         let mut roll: f32 = rng.gen::<f32>() * total_prob;
         
@@ -143,7 +141,6 @@ impl Agent {
             }
         }
         
-        // Fallback to last valid move
         valid_moves.last().copied()
     }
 }

@@ -163,7 +163,6 @@ impl Simulation {
             }
         }
         
-        // Retirer les agents évacués (en ordre décroissant pour éviter les décalages d'index)
         evacuated_indices.sort_by(|a, b| b.cmp(a));
         for i in evacuated_indices {
             self.agents.remove(i);
