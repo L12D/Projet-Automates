@@ -20,7 +20,7 @@ struct RoomConfig {
     pattern: ObstaclePattern,
 }
 
-const ROOM_CONFIGS: [RoomConfig; 6] = [
+const ROOM_CONFIGS: [RoomConfig; 8] = [
     RoomConfig { 
         name: "Salle vide", 
         description: "Aucun obstacle",
@@ -51,13 +51,23 @@ const ROOM_CONFIGS: [RoomConfig; 6] = [
         description: "Réseau de couloirs",
         pattern: ObstaclePattern::Labyrinth 
     },
+    RoomConfig { 
+        name: "Deux sorties adjacentes", 
+        description: "Deux sorties côte à côte",
+        pattern: ObstaclePattern::TwoExitsAdjacent 
+    },
+    RoomConfig { 
+        name: "Deux sorties éloignées", 
+        description: "Deux sorties espacées",
+        pattern: ObstaclePattern::TwoExitsFar 
+    },
 ];
 
 fn window_conf() -> Conf {
     Conf {
         window_title: "Floor-Field Evacuation".to_owned(),
         window_width: 920,  // Set your desired width
-        window_height: 650, // Set your desired height
+        window_height: 750, // Set your desired height
         ..Default::default()
     }
 }
@@ -242,7 +252,7 @@ fn draw_menu(
     
     // Sélection de salle
     let box_w = 700.0;
-    let box_h = 480.0;  // Augmenté pour avoir plus d'espace
+    let box_h = 580.0;  // Augmenté pour avoir plus d'espace avec 8 salles
     let box_x = (screen_w - box_w) / 2.0;
     let box_y = 130.0;
     

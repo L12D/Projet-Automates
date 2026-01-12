@@ -16,6 +16,8 @@ pub enum ObstaclePattern {
     ExitObstacle,    // Obstacle très proche de la sortie
     MultiObstacles,  // Plusieurs obstacles dispersés
     Labyrinth,       // Labyrinthe simple
+    TwoExitsAdjacent, // Deux sorties adjacentes sur le mur droit
+    TwoExitsFar,     // Deux sorties éloignées sur le mur droit
 }
 
 pub struct Grid {
@@ -43,8 +45,15 @@ impl Grid {
         // Add obstacles based on pattern
         grid.add_obstacles_pattern(pattern);
         
-        // Add exit on the right side
-        grid.add_exit();
+        // Add exit(s) on the right side based on pattern
+        match pattern {
+            ObstaclePattern::TwoExitsAdjacent | ObstaclePattern::TwoExitsFar => {
+                grid.add_two_exits(pattern);
+            }
+            _ => {
+                grid.add_exit();
+            }
+        }
         
         grid
     }
@@ -209,6 +218,16 @@ impl Grid {
                     }
                 }
             },
+            
+            ObstaclePattern::TwoExitsAdjacent => {
+                // Pas d'obstacles internes pour ce pattern
+                // Les deux sorties seront créées par add_two_exits()
+            },
+            
+            ObstaclePattern::TwoExitsFar => {
+                // Pas d'obstacles internes pour ce pattern
+                // Les deux sorties seront créées par add_two_exits()
+            },
         }
     }
     
@@ -220,6 +239,54 @@ impl Grid {
             if y >= 0 && (y as usize) < self.height {
                 self.cells[y as usize][self.width - 1] = CellType::Exit;
             }
+        }
+    }
+    
+    fn add_two_exits(&mut self, pattern: ObstaclePattern) {
+        match pattern {
+            ObstaclePattern::TwoExitsAdjacent => {
+                // Two exits (2 blocks wide each) next to each other on the right side
+                let center_y = self.height / 2;
+                
+                // First exit (upper one) - 2 blocks wide
+                for dy in 0..2 {
+                    let y = center_y - 3 + dy;
+                    if y < self.height {
+                        self.cells[y][self.width - 1] = CellType::Exit;
+                    }
+                }
+                
+                // Second exit (lower one) - 2 blocks wide
+                for dy in 0..2 {
+                    let y = center_y + 1 + dy;
+                    if y < self.height {
+                        self.cells[y][self.width - 1] = CellType::Exit;
+                    }
+                }
+            },
+            
+            ObstaclePattern::TwoExitsFar => {
+                // Two exits (2 blocks wide each) far from each other on the right side
+                let quarter_height = self.height / 4;
+                
+                // First exit (upper) - 2 blocks wide
+                for dy in 0..2 {
+                    let y = quarter_height - 1 + dy;
+                    if y < self.height {
+                        self.cells[y][self.width - 1] = CellType::Exit;
+                    }
+                }
+                
+                // Second exit (lower) - 2 blocks wide
+                for dy in 0..2 {
+                    let y = 3 * quarter_height - 1 + dy;
+                    if y < self.height {
+                        self.cells[y][self.width - 1] = CellType::Exit;
+                    }
+                }
+            },
+            
+            _ => {}
         }
     }
     
